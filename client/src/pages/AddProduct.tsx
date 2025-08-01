@@ -16,14 +16,7 @@ import type { InsertProduct, Store } from '@shared/schema';
 import { insertProductSchema } from '@shared/schema';
 import { z } from 'zod';
 
-const addProductSchema = z.object({
-  name: z.string().min(1, "Product name is required"),
-  description: z.string().nullable().optional(),
-  price: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? parseFloat(val) : val
-  ),
-  category: z.string().nullable().optional(),
-  storeId: z.string().min(1, "Store selection is required"),
+const addProductSchema = insertProductSchema.extend({
   quantity: z.union([z.string(), z.number()]).transform(val => 
     typeof val === 'string' ? parseInt(val, 10) : val
   ).optional().default(0)
