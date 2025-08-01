@@ -1,68 +1,46 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Product, Store } from '@/types';
+import { useState, useEffect, useCallback } from 'react';
+import * as React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MapPin, Search, Settings } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import type { Product, Store } from '@shared/schema';
 
 export default function Storefront() {
-  const navigate = useNavigate();
-  const { isAdmin, hasStoreAccess, isSuperAdmin } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    filterProducts();
-  }, [products, selectedStore, searchTerm]);
-
-  const fetchData = async () => {
-    try {
-      const [productsRes, storesRes] = await Promise.all([
-        supabase
-          .from('products')
-          .select(`
-            *,
-            store:stores(*)
-          `)
-          .eq('in_stock', true)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('stores')
-          .select('*')
-          .order('location')
-      ]);
-
-      if (productsRes.data) setProducts(productsRes.data);
-      if (storesRes.data) setStores(storesRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+  const { data: stores = [], isLoading: storesLoading } = useQuery({
+    queryKey: ['/api/stores'],
+    queryFn: async () => {
+      const response = await fetch('/api/stores');
+      if (!response.ok) throw new Error('Failed to fetch stores');
+      return response.json();
     }
-  };
+  });
 
-  const filterProducts = () => {
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['/api/products'],
+    queryFn: async () => {
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
+    }
+  });
+
+  useEffect(() => {
     let filtered = products;
 
     if (selectedStore !== 'all') {
-      filtered = filtered.filter(product => product.store_id === selectedStore);
+      filtered = filtered.filter((product: Product) => product.storeId === selectedStore);
     }
 
     if (searchTerm) {
-      filtered = filtered.filter(product =>
+      filtered = filtered.filter((product: Product) =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -70,9 +48,9 @@ export default function Storefront() {
     }
 
     setFilteredProducts(filtered);
-  };
+  }, [products, selectedStore, searchTerm]);
 
-  if (loading) {
+  if (storesLoading || productsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div>Loading...</div>
@@ -95,7 +73,7 @@ export default function Storefront() {
         <div className="container mx-auto px-6">
           <h2 className="text-2xl font-bold mb-6 text-center">Our Locations</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {stores.map((store) => (
+            {stores.map((store: Store) => (
               <Card key={store.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -109,17 +87,7 @@ export default function Storefront() {
                         )}
                       </div>
                     </div>
-                    {isAdmin && (isSuperAdmin || hasStoreAccess(store.id)) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/store/${store.id}`)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Settings className="w-4 h-4 mr-1" />
-                        Manage
-                      </Button>
-                    )}
+
                   </div>
                 </CardContent>
               </Card>
@@ -146,7 +114,7 @@ export default function Storefront() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Stores</SelectItem>
-              {stores.map((store) => (
+              {stores.map((store: Store) => (
                 <SelectItem key={store.id} value={store.id}>
                   {store.location}
                 </SelectItem>
@@ -164,10 +132,10 @@ export default function Storefront() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
               <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                {product.image_url && (
+                {product.imageUrl && (
                   <div className="aspect-square bg-muted">
                     <img
-                      src={product.image_url}
+                      src={product.imageUrl}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
@@ -182,11 +150,8 @@ export default function Storefront() {
                 <CardContent>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-2xl font-bold text-primary">
-                      ₦{product.price.toLocaleString()}
+                      ₦{parseFloat(product.price).toLocaleString()}
                     </span>
-                    <Badge variant="outline">
-                      {product.store?.location}
-                    </Badge>
                   </div>
                   <div className="flex flex-wrap gap-1 mb-3">
                     {product.category && (
@@ -206,7 +171,7 @@ export default function Storefront() {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Available at {product.store?.name}
+                    Available at store
                   </p>
                 </CardContent>
               </Card>
