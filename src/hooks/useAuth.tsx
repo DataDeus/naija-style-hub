@@ -1,17 +1,20 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/types';
+import { Profile, AdminStoreAssignment } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  assignedStores: AdminStoreAssignment[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  hasStoreAccess: (storeId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [assignedStores, setAssignedStores] = useState<AdminStoreAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile and store assignments
           setTimeout(async () => {
             const { data: profileData } = await supabase
               .from('profiles')
@@ -38,9 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .eq('id', session.user.id)
               .single();
             setProfile(profileData as Profile);
+
+            // TODO: Fetch store assignments for admins once types are updated
+            setAssignedStores([]);
           }, 0);
         } else {
           setProfile(null);
+          setAssignedStores([]);
         }
         setLoading(false);
       }
@@ -83,17 +91,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'SUPERADMIN';
+  const isSuperAdmin = profile?.role === 'SUPERADMIN';
+  
+  const hasStoreAccess = (storeId: string) => {
+    if (isSuperAdmin) return true;
+    if (profile?.role === 'ADMIN') {
+      return assignedStores.some(assignment => assignment.store_id === storeId);
+    }
+    return false;
+  };
 
   const value = {
     user,
     session,
     profile,
+    assignedStores,
     loading,
     signIn,
     signUp,
     signOut,
     isAdmin,
+    isSuperAdmin,
+    hasStoreAccess,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

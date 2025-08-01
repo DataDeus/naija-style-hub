@@ -14,9 +14,12 @@ import { toast } from '@/hooks/use-toast';
 import { Plus, Store as StoreIcon, Package } from 'lucide-react';
 
 export default function Dashboard() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isSuperAdmin, user, profile } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -25,6 +28,27 @@ export default function Dashboard() {
       fetchData();
     }
   }, [user, isAdmin]);
+
+  useEffect(() => {
+    filterProducts();
+  }, [products, selectedStore, searchTerm]);
+
+  const filterProducts = () => {
+    let filtered = products;
+    
+    if (selectedStore !== 'all') {
+      filtered = filtered.filter(product => product.store_id === selectedStore);
+    }
+    
+    if (searchTerm) {
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setFilteredProducts(filtered);
+  };
 
   const fetchData = async () => {
     try {
@@ -90,18 +114,6 @@ export default function Dashboard() {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>You need admin privileges to access this dashboard.</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -114,7 +126,14 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <div>
+          <h1 className="text-3xl font-bold">
+            {isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard'}
+          </h1>
+          <p className="text-muted-foreground">
+            {isSuperAdmin ? 'Manage all stores and products' : 'Manage your assigned store products'}
+          </p>
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -138,7 +157,7 @@ export default function Dashboard() {
                 <SelectContent>
                   {stores.map((store) => (
                     <SelectItem key={store.id} value={store.id}>
-                      {store.name}
+                      {store.name} - {store.location}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -153,14 +172,39 @@ export default function Dashboard() {
         </Dialog>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <Input
+          placeholder="Search products..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="sm:w-80"
+        />
+        <Select value={selectedStore} onValueChange={setSelectedStore}>
+          <SelectTrigger className="sm:w-60">
+            <SelectValue placeholder="Filter by store" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stores</SelectItem>
+            {stores.map((store) => (
+              <SelectItem key={store.id} value={store.id}>
+                {store.name} - {store.location}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {selectedStore === 'all' ? 'Total Products' : 'Filtered Products'}
+            </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{products.length}</div>
+            <div className="text-2xl font-bold">{filteredProducts.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -179,7 +223,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {products.filter(p => p.in_stock).length}
+              {filteredProducts.filter(p => p.in_stock).length}
             </div>
           </CardContent>
         </Card>
@@ -188,7 +232,12 @@ export default function Dashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Products</CardTitle>
-          <CardDescription>Manage your product inventory across all stores</CardDescription>
+          <CardDescription>
+            {isSuperAdmin 
+              ? 'Manage product inventory across all stores' 
+              : 'Manage your store product inventory'
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -202,7 +251,7 @@ export default function Dashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.store?.name}</TableCell>

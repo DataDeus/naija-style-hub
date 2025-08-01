@@ -11,7 +11,7 @@ import {
 import { Store, Settings, LogOut, User } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, profile, signOut, isAdmin } = useAuth();
+  const { user, profile, signOut, isAdmin, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   const handleSignOut = async () => {
@@ -54,7 +54,10 @@ export default function Navbar() {
                   <Button variant="ghost" className="flex items-center space-x-2">
                     <User className="w-4 h-4" />
                     <span className="hidden sm:inline">{profile?.full_name || 'User'}</span>
-                    {isAdmin && (
+                    {isSuperAdmin && (
+                      <Badge variant="default" className="ml-2">Super Admin</Badge>
+                    )}
+                    {isAdmin && !isSuperAdmin && (
                       <Badge variant="secondary" className="ml-2">Admin</Badge>
                     )}
                   </Button>

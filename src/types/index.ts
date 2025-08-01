@@ -28,7 +28,15 @@ export interface Profile {
   id: string;
   email: string;
   full_name?: string;
-  role: 'admin' | 'user';
+  role: 'SUPERADMIN' | 'ADMIN' | 'USER';
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminStoreAssignment {
+  id: string;
+  admin_id: string;
+  store_id: string;
+  created_at: string;
+  store?: Store;
 }
