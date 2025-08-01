@@ -42,6 +42,8 @@ This is a fashion retail management system called "Razor Sharp Fashion" that was
 - Simplified application by removing auth system initially
 - Created API endpoints for stores and products
 - Added sample data for 3 stores and 75 products
+- Added "Add Product" functionality with store selection form
+- Enhanced storefront with product filtering by store and search
 
 ## User Preferences
 - Focus on core functionality first

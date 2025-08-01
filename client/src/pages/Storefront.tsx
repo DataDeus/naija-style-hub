@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Search, Settings } from 'lucide-react';
+import { MapPin, Search, Settings, Plus } from 'lucide-react';
+import { Link } from 'wouter';
 import type { Product, Store } from '@shared/schema';
 
 export default function Storefront() {
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -32,7 +32,8 @@ export default function Storefront() {
     }
   });
 
-  useEffect(() => {
+  // Compute filtered products directly without useEffect
+  const filteredProducts = React.useMemo(() => {
     let filtered = products;
 
     if (selectedStore !== 'all') {
@@ -47,7 +48,7 @@ export default function Storefront() {
       );
     }
 
-    setFilteredProducts(filtered);
+    return filtered;
   }, [products, selectedStore, searchTerm]);
 
   if (storesLoading || productsLoading) {
@@ -62,9 +63,19 @@ export default function Storefront() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground py-12">
-        <div className="container mx-auto px-6 text-center">
-          <h1 className="text-4xl font-bold mb-4">Razor Sharp Fashion</h1>
-          <p className="text-xl">Premium Fashion Across Nigeria</p>
+        <div className="container mx-auto px-6">
+          <div className="flex justify-between items-center">
+            <div className="text-center flex-1">
+              <h1 className="text-4xl font-bold mb-4">Razor Sharp Fashion</h1>
+              <p className="text-xl">Premium Fashion Across Nigeria</p>
+            </div>
+            <Link href="/add-product">
+              <Button variant="secondary" className="ml-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
