@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import StoreManagement from "./pages/StoreManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requireAdmin={true}>
                     <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/store/:storeId" 
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <StoreManagement />
                   </ProtectedRoute>
                 } 
               />

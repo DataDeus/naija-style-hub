@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Store } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { MapPin, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Search, Settings } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Storefront() {
+  const navigate = useNavigate();
+  const { isAdmin, hasStoreAccess, isSuperAdmin } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -91,17 +96,30 @@ export default function Storefront() {
           <h2 className="text-2xl font-bold mb-6 text-center">Our Locations</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {stores.map((store) => (
-              <Card key={store.id}>
+              <Card key={store.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
                 <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <div>
-                      <h3 className="font-semibold">{store.name}</h3>
-                      <p className="text-sm text-muted-foreground">{store.address}</p>
-                      {store.phone && (
-                        <p className="text-sm text-muted-foreground">{store.phone}</p>
-                      )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <div>
+                        <h3 className="font-semibold">{store.name}</h3>
+                        <p className="text-sm text-muted-foreground">{store.address}</p>
+                        {store.phone && (
+                          <p className="text-sm text-muted-foreground">{store.phone}</p>
+                        )}
+                      </div>
                     </div>
+                    {isAdmin && (isSuperAdmin || hasStoreAccess(store.id)) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/store/${store.id}`)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Settings className="w-4 h-4 mr-1" />
+                        Manage
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
